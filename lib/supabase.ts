@@ -1,31 +1,44 @@
 import { createClient } from "@supabase/supabase-js"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ""
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-function createErrorProxy() {
-  return new Proxy(
-    {},
-    {
-      get() {
-        throw new Error(
-          [
-            "[Supabase] Environment variables missing.",
-            "Please add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY",
-            "to your .env or Vercel project settings.",
-          ].join(" "),
-        )
-      },
-    },
-  ) as any
+// Create a comprehensive mock that handles all Supabase method chains
+function createMockSupabase() {
+  const mockQuery = {
+    select: () => mockQuery,
+    eq: () => mockQuery,
+    neq: () => mockQuery,
+    or: () => mockQuery,
+    order: () => mockQuery,
+    single: () =>
+      Promise.resolve({
+        data: null,
+        error: { message: "Supabase not configured - using demo data" },
+      }),
+    insert: () => mockQuery,
+    delete: () => mockQuery,
+    then: (resolve: any) =>
+      resolve({
+        data: [],
+        error: { message: "Supabase not configured - using demo data" },
+      }),
+  }
+
+  return {
+    from: () => mockQuery,
+  }
 }
 
-export const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : createErrorProxy()
+export const supabase =
+  supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : (createMockSupabase() as any)
 
-// Helpful warning so you notice during development
+// Enhanced logging
 if (!supabaseUrl || !supabaseKey) {
-  console.warn(
-    "[Supabase] Using fallback client because required env-vars are not set.",
-    "All database calls will throw until you configure them.",
-  )
+  console.log(`
+🔧 SUPABASE SETUP STATUS:
+- URL: ${supabaseUrl ? "✅ Set" : "❌ Missing"}  
+- Key: ${supabaseKey ? "✅ Set" : "❌ Missing"}
+- Using demo data until configured
+  `)
 }
